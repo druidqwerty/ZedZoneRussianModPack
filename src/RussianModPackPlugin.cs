@@ -20,7 +20,7 @@ public sealed class RussianModPackPlugin : BasePlugin
 {
     public const string PluginGuid = "com.druid.zedzone.russianmodpack";
     public const string PluginName = "ZED ZONE: Russian Translation Pack";
-    public const string PluginVersion = "1.0.0";
+    public const string PluginVersion = "1.1.0";
 
     internal static ManualLogSource LogSource;
     internal static Harmony HarmonyInstance;
@@ -30,6 +30,7 @@ public sealed class RussianModPackPlugin : BasePlugin
     internal static ConfigEntry<bool> EnableSupplyDrop;
     internal static ConfigEntry<bool> EnableZedCarsFix;
     internal static ConfigEntry<bool> EnableZedQuestsFix;
+    internal static ConfigEntry<bool> EnableModMenuDescriptions;
 
     private static int _langCacheFrame = -1;
     private static bool _langCacheRu = true;
@@ -63,6 +64,11 @@ public sealed class RussianModPackPlugin : BasePlugin
             "EnableZedQuestsFix",
             true,
             "Fix mixed EN/RU ZedLoc/WorldLoc sync, quest item names/descriptions, and Director item cache in ZedQuests (Workshop 3845083095) if installed.");
+        EnableModMenuDescriptions = Config.Bind(
+            "Modules",
+            "EnableModMenuDescriptions",
+            true,
+            "Translate Mod Menu setting descriptions for supported mods into Russian.");
 
         SafeHarmonyPatcher.ResetCounters();
         HarmonyInstance = new Harmony(PluginGuid);
@@ -80,6 +86,9 @@ public sealed class RussianModPackPlugin : BasePlugin
 
         if (EnableZedQuestsFix.Value && ZedQuestsFixModule.TryInstall(HarmonyInstance, LogSource))
             activeModules.Add("ZedQuestsFix");
+
+        if (EnableModMenuDescriptions.Value && ConfigDescriptionsModule.TryInstall(HarmonyInstance, LogSource))
+            activeModules.Add($"ModMenuDesc({ConfigDescriptionsModule.Count})");
 
         string list = activeModules.Count > 0 ? string.Join(", ", activeModules) : "none (no supported target mods detected)";
         LogSource.LogInfo(
