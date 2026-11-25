@@ -20,7 +20,7 @@ public sealed class RussianModPackPlugin : BasePlugin
 {
     public const string PluginGuid = "com.druid.zedzone.russianmodpack";
     public const string PluginName = "ZED ZONE: Russian Translation Pack";
-    public const string PluginVersion = "1.1.0";
+    public const string PluginVersion = "1.2.0";
 
     internal static ManualLogSource LogSource;
     internal static Harmony HarmonyInstance;

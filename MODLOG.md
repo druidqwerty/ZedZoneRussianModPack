@@ -1,5 +1,9 @@
 # MODLOG — ZED ZONE: Russian Translation Pack
 
+## v1.2.0 (2026-11-25)
+- Added full support for **Apocalypse RV v0.9.4+ (`ZedMobileBase.RvLocale`)** alongside backward compatibility with `v0.7.5–v0.9.2` (`ZedMobileBase.RvText`): hooks `RvLocale.TFor` and `RvLocale.Pick`, covers all `399/399` `RvLocale.Entries` keys (plus legacy keys = `534` entries total), and refreshes static caches lazily when Russian becomes active (even on non-Russian Windows).
+- Improved `ConfigDescriptionsModule` to rewrite `<Description>k__BackingField` in-place across loaded BepInEx plugins in addition to patching `ConfigDescription.get_Description`, preventing JIT inlining from bypassing Mod Menu translations.
+
 ## v1.1.0 (2026-11-25)
 - Updated **Apocalypse RV** translation dictionary for **v0.9.2** (`423/423` current keys + legacy v0.7.5 keys = `505` entries total): full coverage of the new RV-01 terminal (`RvDashboard`), drive modes (`EV` / `Hybrid` / `Petrol`), `Portal Summoner` sidearm, and all workstation upgrade pages.
 - Added static-cache refresh (`RvUpgrades.Catalog` & `RvUpgradeMenu.Groups`) in `ApocalypseRvModule.TryInstall` so upgrade names and categories are translated to Russian even if `ZedMobileBase` initializes before `RussianModPack`.

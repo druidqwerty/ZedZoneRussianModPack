@@ -121,15 +121,93 @@ internal static class ConfigDescriptionsModule
 
     internal static int Count => EnToRu.Count;
 
+    private static readonly FieldInfo BackingField = typeof(ConfigDescription).GetField(
+        "<Description>k__BackingField",
+        BindingFlags.Instance | BindingFlags.NonPublic);
+
     internal static bool TryInstall(Harmony harmony, ManualLogSource log)
     {
         MethodInfo getter = typeof(ConfigDescription).GetProperty(
             nameof(ConfigDescription.Description),
             BindingFlags.Instance | BindingFlags.Public)?.GetGetMethod();
 
-        return SafeHarmonyPatcher.TryPatch(
+        bool okGet = SafeHarmonyPatcher.TryPatch(
             harmony, log, "ModMenu:ConfigDescription.get_Description", getter,
             postfix: typeof(ConfigDescriptionsModule).GetMethod(nameof(GetDescriptionPostfix), BindingFlags.Static | BindingFlags.NonPublic));
+
+        ConstructorInfo ctor = typeof(ConfigDescription).GetConstructor(
+            BindingFlags.Instance | BindingFlags.Public,
+            null,
+            new[] { typeof(string), typeof(AcceptableValueBase), typeof(object[]) },
+            null);
+        if (ctor != null)
+        {
+            SafeHarmonyPatcher.TryPatch(
+                harmony, log, "ModMenu:ConfigDescription.ctor", ctor,
+                prefix: typeof(ConfigDescriptionsModule).GetMethod(nameof(CtorPrefix), BindingFlags.Static | BindingFlags.NonPublic));
+        }
+
+        if (RussianModPackPlugin.ShouldUseRussian())
+            RewriteLoadedPluginDescriptions(log);
+
+        return okGet;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void CtorPrefix(ref string description)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(description) || !RussianModPackPlugin.ShouldUseRussian())
+                return;
+
+            if (EnToRu.TryGetValue(description, out string ru))
+                description = ru;
+        }
+        catch { }
+    }
+
+    internal static void RewriteLoadedPluginDescriptions(ManualLogSource log)
+    {
+        if (BackingField == null)
+            return;
+
+        int updated = 0;
+        try
+        {
+            var plugins = BepInEx.Unity.IL2CPP.IL2CPPChainloader.Instance?.Plugins;
+            if (plugins == null)
+                return;
+
+            foreach (var kv in plugins)
+            {
+                if (kv.Value?.Instance is not BepInEx.Unity.IL2CPP.BasePlugin bp)
+                    continue;
+                ConfigFile cfg = bp.Config;
+                if (cfg == null)
+                    continue;
+
+                foreach (ConfigEntryBase entry in cfg.Values)
+                {
+                    ConfigDescription desc = entry?.Description;
+                    if (desc == null)
+                        continue;
+
+                    if (BackingField.GetValue(desc) is string cur && EnToRu.TryGetValue(cur, out string ru) && cur != ru)
+                    {
+                        BackingField.SetValue(desc, ru);
+                        updated++;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            log?.LogWarning($"[ModMenuDesc] Direct rewrite error: {ex.Message}");
+        }
+
+        if (updated > 0)
+            log?.LogInfo($"[ModMenuDesc] Rewrote {updated} loaded BepInEx config description(s) in-place.");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

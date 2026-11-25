@@ -23,13 +23,61 @@ internal static class ApocalypseRvModule
 
     private static readonly HashSet<IntPtr> PreloadedFonts = new();
     private static ManualLogSource _log;
+    private static Assembly _rvAsm;
+    private static bool _staticCachesTranslated;
+
+    // v0.9.4+ RvLocale.Entries (Dictionary<string, ValueTuple<string, string>>)
+    private static Dictionary<string, ValueTuple<string, string>> _rvLocaleEntries;
 
     internal static bool TryInstall(Harmony harmony, ManualLogSource log)
     {
         _log = log;
+        _staticCachesTranslated = false;
+        _rvLocaleEntries = null;
+
+        // 1. Prefer v0.9.4+ ZedMobileBase.RvLocale
+        Type rvLocaleType = FindType("ZedMobileBase.RvLocale");
+        if (rvLocaleType != null)
+        {
+            _rvAsm = rvLocaleType.Assembly;
+
+            FieldInfo entriesField = rvLocaleType.GetField("Entries", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            _rvLocaleEntries = entriesField?.GetValue(null) as Dictionary<string, ValueTuple<string, string>>;
+
+            MethodInfo methodTFor = rvLocaleType.GetMethod(
+                "TFor",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(string), typeof(bool) },
+                null);
+            MethodInfo methodPick = rvLocaleType.GetMethod(
+                "Pick",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(string), typeof(string) },
+                null);
+
+            bool okTFor = SafeHarmonyPatcher.TryPatch(
+                harmony, log, "ApocalypseRV:RvLocale.TFor", methodTFor,
+                prefix: typeof(ApocalypseRvModule).GetMethod(nameof(RvLocaleTForPrefix), BindingFlags.Static | BindingFlags.NonPublic));
+            bool okPick = methodPick == null || SafeHarmonyPatcher.TryPatch(
+                harmony, log, "ApocalypseRV:RvLocale.Pick", methodPick,
+                prefix: typeof(ApocalypseRvModule).GetMethod(nameof(RvLocalePickPrefix), BindingFlags.Static | BindingFlags.NonPublic));
+
+            PatchUiFont(harmony, log);
+
+            if (okTFor && RussianModPackPlugin.ShouldUseRussian())
+                EnsureStaticCachesTranslated();
+
+            return okTFor && okPick;
+        }
+
+        // 2. Fallback to v0.7.5 - v0.9.2 ZedMobileBase.RvText
         Type rvTextType = FindType("ZedMobileBase.RvText");
         if (rvTextType == null)
             return false;
+
+        _rvAsm = rvTextType.Assembly;
 
         MethodInfo methodT = rvTextType.GetMethod(
             "T",
@@ -51,8 +99,7 @@ internal static class ApocalypseRvModule
             harmony, log, "ApocalypseRV:RvText.F", methodF,
             prefix: typeof(ApocalypseRvModule).GetMethod(nameof(TranslateFPrefix), BindingFlags.Static | BindingFlags.NonPublic));
 
-        // Patch RvDashboard.Preview ctor in v0.9.x to also translate the unwrapped CJK overview hint.
-        Type previewType = rvTextType.Assembly.GetType("ZedMobileBase.RvDashboard+Preview", throwOnError: false);
+        Type previewType = _rvAsm.GetType("ZedMobileBase.RvDashboard+Preview", throwOnError: false);
         ConstructorInfo previewCtor = previewType?.GetConstructor(
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             null,
@@ -65,6 +112,16 @@ internal static class ApocalypseRvModule
                 prefix: typeof(ApocalypseRvModule).GetMethod(nameof(PreviewCtorPrefix), BindingFlags.Static | BindingFlags.NonPublic));
         }
 
+        PatchUiFont(harmony, log);
+
+        if (okT && RussianModPackPlugin.ShouldUseRussian())
+            EnsureStaticCachesTranslated();
+
+        return okT && okF;
+    }
+
+    private static void PatchUiFont(Harmony harmony, ManualLogSource log)
+    {
         MethodInfo getUiFont = typeof(DrivingPanel).GetMethod(
             "GetUIFont",
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
@@ -74,22 +131,20 @@ internal static class ApocalypseRvModule
                 harmony, log, "ApocalypseRV:DrivingPanel.GetUIFont", getUiFont,
                 postfix: typeof(ApocalypseRvModule).GetMethod(nameof(GetUIFontPostfix), BindingFlags.Static | BindingFlags.NonPublic));
         }
-
-        // Translate static caches that may have initialized before RussianModPackPlugin.Load().
-        if (okT && RussianModPackPlugin.ShouldUseRussian())
-            TranslateStaticCaches(rvTextType.Assembly, log);
-
-        return okT && okF;
     }
 
-    private static void TranslateStaticCaches(Assembly rvAsm, ManualLogSource log)
+    private static void EnsureStaticCachesTranslated()
     {
+        if (_staticCachesTranslated || _rvAsm == null)
+            return;
+
+        _staticCachesTranslated = true;
         int updatedSpecs = 0;
         int updatedGroups = 0;
 
         try
         {
-            Type upgradesType = rvAsm.GetType("ZedMobileBase.RvUpgrades", throwOnError: false);
+            Type upgradesType = _rvAsm.GetType("ZedMobileBase.RvUpgrades", throwOnError: false);
             PropertyInfo catalogProp = upgradesType?.GetProperty("Catalog", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             if (catalogProp?.GetValue(null) is IEnumerable catalog)
             {
@@ -125,12 +180,12 @@ internal static class ApocalypseRvModule
         }
         catch (Exception ex)
         {
-            log?.LogWarning($"[ApocalypseRV] Failed to refresh RvUpgrades.Catalog: {ex.Message}");
+            _log?.LogWarning($"[ApocalypseRV] Failed to refresh RvUpgrades.Catalog: {ex.Message}");
         }
 
         try
         {
-            Type menuType = rvAsm.GetType("ZedMobileBase.RvUpgradeMenu", throwOnError: false);
+            Type menuType = _rvAsm.GetType("ZedMobileBase.RvUpgradeMenu", throwOnError: false);
             FieldInfo groupsField = menuType?.GetField("Groups", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             if (groupsField?.GetValue(null) is IEnumerable groups)
             {
@@ -150,11 +205,11 @@ internal static class ApocalypseRvModule
         }
         catch (Exception ex)
         {
-            log?.LogWarning($"[ApocalypseRV] Failed to refresh RvUpgradeMenu.Groups: {ex.Message}");
+            _log?.LogWarning($"[ApocalypseRV] Failed to refresh RvUpgradeMenu.Groups: {ex.Message}");
         }
 
         if (updatedSpecs > 0 || updatedGroups > 0)
-            log?.LogInfo($"[ApocalypseRV] Refreshed static caches: specs={updatedSpecs}, groups={updatedGroups}.");
+            _log?.LogInfo($"[ApocalypseRV] Refreshed static caches: specs={updatedSpecs}, groups={updatedGroups}.");
     }
 
     private static Type FindType(string fullName)
@@ -173,12 +228,65 @@ internal static class ApocalypseRvModule
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool RvLocaleTForPrefix(string key, bool chinese, ref string __result)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(key) || !RussianModPackPlugin.ShouldUseRussian())
+                return true;
+
+            if (!_staticCachesTranslated)
+                EnsureStaticCachesTranslated();
+
+            if (_rvLocaleEntries != null && _rvLocaleEntries.TryGetValue(key, out ValueTuple<string, string> pair))
+            {
+                if (!string.IsNullOrEmpty(pair.Item1) && RvRussianDictionary.TryGet(pair.Item1, out string ru))
+                {
+                    __result = ru;
+                    return false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning($"[ApocalypseRV] RvLocale.TFor() error: {ex.Message}");
+        }
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool RvLocalePickPrefix(string zh, string en, ref string __result)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(zh) || !RussianModPackPlugin.ShouldUseRussian())
+                return true;
+
+            if (RvRussianDictionary.TryGet(zh, out string ru))
+            {
+                __result = ru;
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning($"[ApocalypseRV] RvLocale.Pick() error: {ex.Message}");
+        }
+
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
     private static bool TranslateTPrefix(string zh, ref string __result)
     {
         try
         {
             if (string.IsNullOrEmpty(zh) || !RussianModPackPlugin.ShouldUseRussian())
                 return true;
+
+            if (!_staticCachesTranslated)
+                EnsureStaticCachesTranslated();
 
             if (RvRussianDictionary.TryGet(zh, out string ru))
             {
@@ -201,6 +309,9 @@ internal static class ApocalypseRvModule
         {
             if (string.IsNullOrEmpty(zhFormat) || !RussianModPackPlugin.ShouldUseRussian())
                 return true;
+
+            if (!_staticCachesTranslated)
+                EnsureStaticCachesTranslated();
 
             if (RvRussianDictionary.TryGet(zhFormat, out string ruFormat))
             {
