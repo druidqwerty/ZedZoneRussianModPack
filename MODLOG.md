@@ -1,5 +1,13 @@
 # MODLOG — ZED ZONE: Russian Translation Pack
 
+## v1.3.0 (2026-11-27)
+- Added full Russian localization for **Spawn Menu (`3839284592`, `girthy_mods.zedzone.spawnmenu` v1.4.3)** via `SoftDependency` (`EnableSpawnMenu` toggle in config):
+  - Translates all UI headers, search prompt, amount label/buttons (`Кол-во`, `Стак`), all 9 category tabs (`Все`, `Моды`, `Оружие`, `Патроны`, `Ближний`, `Снаряж.`, `Еда`, `Ресурсы`, `Прочее`) without breaking `Menu.InTab` string switching, empty-list placeholders, item list tags (`стак`, `[мод]`), all 16 `ItemType` category labels (`Catalog.TypeLabel` + `Catalog.NameOf` fallback), footer hints, right-panel buttons, all 5 default kit names, and all status-bar messages (item spawn, magazine fill, dump, reload, kit results, missing items, Helicopter/Tank/rocket errors).
+  - Fixes Cyrillic font selection in `SpawnMenu.Fonts.Sample` (original `c >= '\u0530'` skipped Unicode Cyrillic `\u0400–\u04FF`) so `MenuFont = auto` automatically selects a Cyrillic-capable game font (`ZedZoneSans-Regular`) and preloads Cyrillic glyphs across UI sizes.
+  - Adds Russian/English layout-aware keyboard input for the search box (`Keyboard.current` + Win32 `GetKeyboardLayout`/`ToUnicodeEx`, supporting all 33 Cyrillic letters including `ё`, `х`, `ъ`, `ж`, `э`, `б`, `ю` as well as `.` and Latin switching, restoring original `In.TypeKeys` whenever `LanguageMode = off`).
+  - Added Russian Mod Menu descriptions in `ConfigDescriptionsModule` for all **7** `Spawn Menu` settings plus `EnableSpawnMenu` (**58** total translated Mod Menu descriptions).
+- Verified in real graphical `ZEDZONE.exe` (Patch `1.0.23`, isolated save lab, `25/25` checks PASS, `applied=17, failed=0`, visual inspection of 4 PNG screenshots: main RU, Cyrillic search, kit status bar, and `LanguageMode=off` revert), plus headless `SoftDependency` check without `Spawn Menu` (`applied=10, failed=0`) and `Save-Guard` (`8 386/8 386` save files byte-identical).
+
 ## v1.2.0 (2026-11-25)
 - Added full support for **Apocalypse RV v0.9.4+ (`ZedMobileBase.RvLocale`)** alongside backward compatibility with `v0.7.5–v0.9.2` (`ZedMobileBase.RvText`): hooks `RvLocale.TFor` and `RvLocale.Pick`, covers all `399/399` `RvLocale.Entries` keys (plus legacy keys = `534` entries total), and refreshes static caches lazily when Russian becomes active (even on non-Russian Windows).
 - Improved `ConfigDescriptionsModule` to rewrite `<Description>k__BackingField` in-place across loaded BepInEx plugins in addition to patching `ConfigDescription.get_Description`, preventing JIT inlining from bypassing Mod Menu translations.

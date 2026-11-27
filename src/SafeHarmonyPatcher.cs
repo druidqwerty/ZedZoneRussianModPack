@@ -22,7 +22,8 @@ internal static class SafeHarmonyPatcher
         string label,
         MethodBase target,
         MethodInfo prefix = null,
-        MethodInfo postfix = null)
+        MethodInfo postfix = null,
+        MethodInfo transpiler = null)
     {
         if (target == null)
         {
@@ -36,7 +37,8 @@ internal static class SafeHarmonyPatcher
             harmony.Patch(
                 target,
                 prefix: prefix != null ? new HarmonyMethod(prefix) : null,
-                postfix: postfix != null ? new HarmonyMethod(postfix) : null);
+                postfix: postfix != null ? new HarmonyMethod(postfix) : null,
+                transpiler: transpiler != null ? new HarmonyMethod(transpiler) : null);
             AppliedCount++;
             return true;
         }

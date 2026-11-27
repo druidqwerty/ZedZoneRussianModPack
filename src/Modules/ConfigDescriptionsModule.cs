@@ -23,8 +23,26 @@ internal static class ConfigDescriptionsModule
             "Исправлять смешанные EN/RU названия машин, определение языка ZedLoc и описания комплектов в ZedCars (Workshop 3845083252).",
         ["Fix mixed EN/RU ZedLoc/WorldLoc sync, quest item names/descriptions, and Director item cache in ZedQuests (Workshop 3845083095) if installed."] =
             "Исправлять синхронизацию ZedLoc/WorldLoc, названия/описания квестовых предметов и кэш Директора в ZedQuests (Workshop 3845083095).",
+        ["Translate Spawn Menu (Workshop 3839284592) UI, categories, kit names, status messages, and Cyrillic search if installed."] =
+            "Переводить интерфейс, категории, названия наборов, статусы и включать русский поиск в Spawn Menu (Workshop 3839284592), если установлен.",
         ["Translate Mod Menu setting descriptions for supported mods into Russian."] =
             "Переводить описания настроек поддерживаемых модов в меню модов (Mod Menu) на русский.",
+
+        // --- Spawn Menu (girthy_mods.zedzone.spawnmenu) ---
+        ["Opens and closes the spawn menu."] =
+            "Открывает и закрывает меню спавна.",
+        ["Size of the menu. 1 = sized for the screen height, 1.25 = a quarter bigger."] =
+            "Масштаб меню. 1 = под высоту экрана, 1.25 = на четверть крупнее.",
+        ["List items the game flags as hidden. The game flags about 300 normal items this way (Iron Plates among them), so leave this on unless the list has items you never want to see."] =
+            "Показывать предметы, помеченные игрой как скрытые (около 300 обычных предметов, включая железные пластины). Лучше оставить включённым.",
+        ["Kits with a 'fillmags' line load their magazines from the ammo in the kit."] =
+            "Наборы со строкой 'fillmags' автоматически заряжают свои магазины патронами из набора.",
+        ["Most separate items one click can spawn (guns, clothes and other items that don't stack). Stops a typo from flooding the world."] =
+            "Максимум отдельных не стакающихся предметов за один клик (оружие, одежда и т.п.). Защищает от случайного переполнения.",
+        ["Font for the menu. auto = Unity's default, or the game's own UI font when item names have Chinese / Japanese / Korean (or other) characters the default font can't show. default = always Unity's font. Or the name of a font the game has loaded (the log lists them)."] =
+            "Шрифт меню. auto = автоматический выбор шрифта игры для кириллицы и CJK; default = стандартный шрифт Unity; либо имя любого загруженного шрифта (см. лог).",
+        ["Extra detail in BepInEx\\SpawnMenu.log."] =
+            "Записывать подробный журнал в BepInEx\\SpawnMenu.log.",
 
         // --- Apocalypse RV (zedzone.mobilebase.rv) ---
         ["Enter the motorhome from its interaction list."] =

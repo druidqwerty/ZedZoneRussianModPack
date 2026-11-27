@@ -16,11 +16,12 @@ namespace ZedZone.RussianModPack;
 [BepInDependency("girthy_mods.zedzone.supplydrop", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("zedcars.core", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("zedquests.core", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("girthy_mods.zedzone.spawnmenu", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class RussianModPackPlugin : BasePlugin
 {
     public const string PluginGuid = "com.druid.zedzone.russianmodpack";
     public const string PluginName = "ZED ZONE: Russian Translation Pack";
-    public const string PluginVersion = "1.2.0";
+    public const string PluginVersion = "1.3.0";
 
     internal static ManualLogSource LogSource;
     internal static Harmony HarmonyInstance;
@@ -30,6 +31,7 @@ public sealed class RussianModPackPlugin : BasePlugin
     internal static ConfigEntry<bool> EnableSupplyDrop;
     internal static ConfigEntry<bool> EnableZedCarsFix;
     internal static ConfigEntry<bool> EnableZedQuestsFix;
+    internal static ConfigEntry<bool> EnableSpawnMenu;
     internal static ConfigEntry<bool> EnableModMenuDescriptions;
 
     private static int _langCacheFrame = -1;
@@ -64,6 +66,11 @@ public sealed class RussianModPackPlugin : BasePlugin
             "EnableZedQuestsFix",
             true,
             "Fix mixed EN/RU ZedLoc/WorldLoc sync, quest item names/descriptions, and Director item cache in ZedQuests (Workshop 3845083095) if installed.");
+        EnableSpawnMenu = Config.Bind(
+            "Modules",
+            "EnableSpawnMenu",
+            true,
+            "Translate Spawn Menu (Workshop 3839284592) UI, categories, kit names, status messages, and Cyrillic search if installed.");
         EnableModMenuDescriptions = Config.Bind(
             "Modules",
             "EnableModMenuDescriptions",
@@ -86,6 +93,9 @@ public sealed class RussianModPackPlugin : BasePlugin
 
         if (EnableZedQuestsFix.Value && ZedQuestsFixModule.TryInstall(HarmonyInstance, LogSource))
             activeModules.Add("ZedQuestsFix");
+
+        if (EnableSpawnMenu.Value && SpawnMenuModule.TryInstall(HarmonyInstance, LogSource))
+            activeModules.Add("SpawnMenu");
 
         if (EnableModMenuDescriptions.Value && ConfigDescriptionsModule.TryInstall(HarmonyInstance, LogSource))
             activeModules.Add($"ModMenuDesc({ConfigDescriptionsModule.Count})");
